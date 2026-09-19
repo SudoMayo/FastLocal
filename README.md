@@ -10,7 +10,6 @@ Instant disruption cover for Mumbai local train commuters. Tap once to protect y
 |---|---|
 | Live app | https://web-amber-seven-021mzgehda.vercel.app (phone page `/`, operator screen [`/screen`](https://web-amber-seven-021mzgehda.vercel.app/screen)) |
 | Testnet contract | [`0xB3b7ca84934aB1F2655179349452E9183e5D4C60`](https://testnet.monadvision.com/address/0xB3b7ca84934aB1F2655179349452E9183e5D4C60) on Monad Testnet (chain 10143), **verified** (Sourcify), deploy block 63835612 |
-| Mainnet contract | _TODO: address_ on Monad Mainnet (chain 143), sales closed, verified: _TODO: link_ |
 | Demo video | _TODO: link_ |
 | Repo | https://github.com/SudoMayo/FastLocal |
 
@@ -168,7 +167,7 @@ forge verify-contract <CONTRACT_ADDRESS> src/FastLocalCore.sol:FastLocalCore --c
 | `DEPLOYER_PRIVATE_KEY` | yes | `0x…` | Owner + oracle |
 | `AGENT_WORKER_ADDRESS` | no | `0x…` | Registered as agent |
 | `AGENT_SERVER_ADDRESS` | no | `0x…` | Registered as agent |
-| `VAULT_FUND_MON` | no | `3` | MON sent to the payout vault at deploy (`0` on mainnet) |
+| `VAULT_FUND_MON` | no | `3` | MON sent to the payout vault at deploy |
 
 If you change the contract, regenerate the ABI in `web/lib/abi.ts` with `forge inspect FastLocalCore abi --json`.
 
@@ -285,6 +284,7 @@ Build check: `npm run build` (zero errors, zero type errors) and `npx eslint app
 - **Single oracle operator** in this version. Next: a quorum of rail service status, rainfall data and verified commuter reports.
 - **Testnet MON at a demo rate.** Next: stablecoin payouts and a UPI off-ramp.
 - **No coverage cap per station yet.** Next: cap passes per station by vault size.
+- **Testnet only.** This build is not deployed to Monad Mainnet. Next: a mainnet deploy with stablecoin payouts.
 - **Burner wallets are demo wallets.**
 - **Rate limits are in-memory** per server instance.
 - **The agent runs on one machine.**
