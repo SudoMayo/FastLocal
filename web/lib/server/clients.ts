@@ -5,11 +5,10 @@ import {
   createWalletClient,
   http,
   nonceManager,
-  type Account,
   type PublicClient,
   type WalletClient,
 } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
+import { privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
 import { chain, RPC_URL as PUBLIC_RPC_URL } from "../config";
 
 const RPC_URL = process.env.RPC_URL || PUBLIC_RPC_URL;
@@ -27,7 +26,7 @@ function requireEnv(name: string): string {
   return value;
 }
 
-type Signer = { account: Account; wallet: WalletClient };
+type Signer = { account: PrivateKeyAccount; wallet: WalletClient };
 const signers = new Map<string, Signer>();
 
 /** One cached signer per key env var. nonceManager keeps concurrent sends in order. */

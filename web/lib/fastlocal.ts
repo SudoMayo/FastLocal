@@ -8,7 +8,7 @@ import {
   type PublicClient,
 } from "viem";
 import { generatePrivateKey, privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
-import { chain, CONTRACT_ADDRESS, RPC_URL, RUPEES_PER_MON } from "./config";
+import { chain, CONTRACT_ADDRESS, RPC_URL, RUPEES_PER_MON, STATIONS } from "./config";
 import { bufferGas, fastLocal, readSnapshot, readStatuses, toPolicyView } from "./contract";
 import type { PolicyView } from "./types";
 
@@ -156,6 +156,27 @@ function errorText(err: unknown): string {
 
 export function getSnapshot(stationId: number) {
   return readSnapshot(client, stationId);
+}
+
+/** Operator screen: every station's snapshot plus chain time, in one multicall. */
+export async function getAllSnapshots() {
+  const [snapshots, block, waitingPeriod] = await Promise.all([
+    Promise.all(STATIONS.map((s) => readSnapshot(client, s.id))),
+    client.getBlock({ blockTag: "latest" }),
+    client.readContract({ ...fastLocal, functionName: "waitingPeriod" }),
+  ]);
+  return { snapshots, nowSec: Number(block.timestamp), waitingPeriod: Number(waitingPeriod) };
+}
+
+const blockTimes = new Map<number, number>();
+
+/** Block timestamp in seconds (Monad block timestamps have 1 s resolution). Cached. */
+export async function getBlockTime(blockNumber: number): Promise<number> {
+  const cached = blockTimes.get(blockNumber);
+  if (cached !== undefined) return cached;
+  const block = await client.getBlock({ blockNumber: BigInt(blockNumber) });
+  blockTimes.set(blockNumber, Number(block.timestamp));
+  return Number(block.timestamp);
 }
 
 /**
