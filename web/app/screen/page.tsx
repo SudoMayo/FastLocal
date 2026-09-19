@@ -236,6 +236,8 @@ export default function ScreenPage() {
           onSubmit={(e) => {
             e.preventDefault();
             writePass(passInput.trim());
+            setPassInput(""); // never append to an old attempt
+            setMessage(null);
           }}
         >
           <div className="flex items-center gap-3">
@@ -245,6 +247,11 @@ export default function ScreenPage() {
               <p className="text-sm text-muted">Enter the admin passcode</p>
             </div>
           </div>
+          {message?.includes("Wrong passcode") && (
+            <p className="rounded-xl bg-rose-500/10 px-3 py-2 text-sm text-rose-200 ring-1 ring-rose-400/40">
+              Wrong passcode. Please try again.
+            </p>
+          )}
           <input
             className="rounded-xl bg-ink px-4 py-3 ring-1 ring-line outline-none focus:ring-2 focus:ring-monsoon"
             type="password"
