@@ -235,7 +235,6 @@ npm run dev                  # http://localhost:3000 (phone), http://localhost:3
 | `NEXT_PUBLIC_RPC_URL` | browser | no | `https://testnet-rpc.monad.xyz` |
 | `NEXT_PUBLIC_EXPLORER_URL` | browser | no | `https://testnet.monadvision.com` |
 | `NEXT_PUBLIC_CHAIN_ID` | browser | no | `10143` |
-| `NEXT_PUBLIC_DEPLOY_BLOCK` | browser | no | `63835612` |
 | `RPC_URL` | server | no (yes if it is a private RPC) | `https://testnet-rpc.monad.xyz` |
 | `ORACLE_PRIVATE_KEY` | server | **yes** | DEPLOYER key |
 | `RELAYER_PRIVATE_KEY` | server | **yes** | RELAYER key |
@@ -250,8 +249,6 @@ Worker-only variables (same file, used by `npm run agent`; never put them on Ver
 |---|---|---|
 | `AGENT_WORKER_PRIVATE_KEY` | **yes** | AGENT_WORKER key |
 | `CONTRACT_ADDRESS` | no | same as `NEXT_PUBLIC_CONTRACT_ADDRESS` |
-| `ORACLE_MODE` | no | `manual` |
-| `ALERT_MM`, `CLEAR_MM` | no | reserved for the auto rain oracle (not in this build) |
 
 ### 6. Start the agent
 
@@ -286,7 +283,7 @@ Build check: `npm run build` (zero errors, zero type errors) and `npx eslint app
 3. Deploy. Open `/` on a phone and `/screen` on the projector.
 4. Run the agent (`npm run agent`) on the operator's machine. It is a long-running loop, so it does not run on Vercel. The screen's "Run payouts now" button is the serverless fallback.
 
-**If the contract is redeployed:** update `NEXT_PUBLIC_CONTRACT_ADDRESS` and `NEXT_PUBLIC_DEPLOY_BLOCK` on Vercel and redeploy, update `CONTRACT_ADDRESS` for the worker, and update this README.
+**If the contract is redeployed:** update `NEXT_PUBLIC_CONTRACT_ADDRESS` on Vercel and redeploy, update `CONTRACT_ADDRESS` for the worker, and update this README.
 
 ## Business model and pre-market fit
 

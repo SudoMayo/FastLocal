@@ -43,13 +43,12 @@ P0 (must ship; announce only these):
 - Operator screen: station controls with cause, QR, live counts, health panel,
   on-chain speed proof.
 - README a stranger can follow. Hosted on Vercel.
-- Same contract deployed on Monad Mainnet with sales closed, verified.
 P1 (only after P0 passes the E2E test):
 - Auto rain oracle: Open-Meteo rainfall sets ALERT / CLEAR with cause RAIN_FLOOD.
   It never sets DISRUPTED and never overrides an operator status.
 - Seed script for load tests. Haptic buzz on payout.
 Cut: real sensors, LLM, LP tokens, governance, account abstraction, UPI off-ramp
-(next step only), detailed multi-line map.
+(next step only), detailed multi-line map, Monad Mainnet deploy (next step; this build is testnet only).
 
 ## 7. Autonomous agent design
 - Worker: web/scripts/agent.ts, run with `npm run agent`. Loop every 2 s:

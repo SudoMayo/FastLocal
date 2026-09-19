@@ -1,6 +1,6 @@
 // Single source for chain, contract, stations, amounts and display rate.
 // Browser-safe: only NEXT_PUBLIC_* values (and CONTRACT_ADDRESS for the local worker).
-import { defineChain, parseEther } from "viem";
+import { defineChain } from "viem";
 import { monadTestnet } from "viem/chains";
 import type { Cause, Station, StationStatus } from "./types";
 
@@ -49,17 +49,12 @@ export const CAUSE_LABELS: Record<Cause, string> = {
   OTHER: "Other",
 };
 
-// Amounts. The contract holds the live values (owner-settable); these are the defaults.
+// Amounts. The contract holds the live values (owner-settable); these are the deploy defaults.
 export const BASE_PREMIUM_MON = "0.001"; // Rs 10
 export const PAYOUT_MON = "0.03"; // Rs 300
-export const BASE_PREMIUM_WEI = parseEther(BASE_PREMIUM_MON);
-export const PAYOUT_WEI = parseEther(PAYOUT_MON);
 
 // Display rate: 0.0001 MON = Rs 1 (demo rate).
 export const RUPEES_PER_MON = 10_000;
-export function monToRupees(mon: number): number {
-  return Math.round(mon * RUPEES_PER_MON);
-}
 
 // Polling (ms).
 export const PHONE_POLL_MS = 3_000;
