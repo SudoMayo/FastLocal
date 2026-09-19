@@ -8,7 +8,7 @@ Instant disruption cover for Mumbai local train commuters. Tap once to protect y
 
 | | |
 |---|---|
-| Live app | _TODO: Vercel URL_ (phone page `/`, operator screen `/screen`) |
+| Live app | https://web-amber-seven-021mzgehda.vercel.app (phone page `/`, operator screen [`/screen`](https://web-amber-seven-021mzgehda.vercel.app/screen)) |
 | Testnet contract | [`0xB3b7ca84934aB1F2655179349452E9183e5D4C60`](https://testnet.monadvision.com/address/0xB3b7ca84934aB1F2655179349452E9183e5D4C60) on Monad Testnet (chain 10143), **verified** (Sourcify), deploy block 63835612 |
 | Mainnet contract | _TODO: address_ on Monad Mainnet (chain 143), sales closed, verified: _TODO: link_ |
 | Demo video | _TODO: link_ |
