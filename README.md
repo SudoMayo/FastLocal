@@ -25,9 +25,9 @@ Instant disruption cover for Mumbai local train commuters. Tap once to protect y
 
 ## Demo video
 
-<a href="docs/fastlocal-demo.mp4"><img src="docs/screenshots/demo-video.png" width="720" alt="Watch the FastLocal demo video"></a>
+<a href="https://web-amber-seven-021mzgehda.vercel.app/demo.mp4"><img src="docs/screenshots/demo-video.png" width="720" alt="Watch the FastLocal demo video"></a>
 
-[Watch the demo video (73 s)](docs/fastlocal-demo.mp4)
+[Watch the demo video (73 s)](https://web-amber-seven-021mzgehda.vercel.app/demo.mp4). It plays in the browser. The file is also in the repo at `web/public/demo.mp4`.
 
 ## The problem
 
@@ -268,6 +268,7 @@ Seconds come from block timestamps (1 s resolution). Monad charges the full gas 
 ```
 contracts/          Foundry: src/FastLocalCore.sol, test/, script/Deploy.s.sol
 web/app/            phone page, /screen operator page, API routes (drip, health, admin)
+web/public/         demo video (served by the live app at /demo.mp4)
 web/components/     shared UI pieces (station board, status pill, icons)
 web/lib/            config, ABI, contract reads, client helpers, payout engine
 web/scripts/        agent.ts (autonomous worker), seed.ts (load test)
