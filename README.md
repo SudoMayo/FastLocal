@@ -23,6 +23,12 @@ Instant disruption cover for Mumbai local train commuters. Tap once to protect y
 
 <img src="docs/screenshots/7-operator-screen.png" alt="Operator screen with speed proof banner">
 
+## Demo video
+
+<video src="docs/fastlocal-demo.mp4" controls width="720" aria-label="FastLocal demo video"></video>
+
+[Download or open the demo video](docs/fastlocal-demo.mp4)
+
 ## The problem
 
 - Mumbai's local trains carry millions of people a day, and service stops often: rain flooding in the monsoon; signal, power and track faults all year.
