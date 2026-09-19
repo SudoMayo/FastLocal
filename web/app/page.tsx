@@ -65,6 +65,7 @@ export default function PhonePage() {
   const [buyTx, setBuyTx] = useState<string | null>(null);
   const [payoutTx, setPayoutTx] = useState<string | null>(null);
   const [wantNewPass, setWantNewPass] = useState(false);
+  const [peekId, setPeekId] = useState<number | null>(null); // station tapped while a pass is active
   const failures = useRef(0);
 
   // ---------- Boot: burner wallet + gas drip ----------
@@ -91,6 +92,15 @@ export default function PhonePage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     start();
   }, [start]);
+
+  // Fresh demo wallet with this station preselected (one active pass per wallet).
+  const startOverAt = (id: number) => {
+    try {
+      localStorage.setItem(STATION_PREF, String(id));
+    } catch {}
+    resetBurner();
+    window.location.reload();
+  };
 
   const chooseStation = (id: number) => {
     setStationId(id);
@@ -355,10 +365,30 @@ export default function PhonePage() {
             {notice && <Notice text={notice} />}
             <div>
               <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted">Live status, all stations</h2>
-              <StationPicker stations={stations} selectedId={policy.stationId} />
-              <p className="mt-3 text-sm text-muted">
-                One pass at a time per wallet. When this pass pays out or expires, you can pick any station again.
-              </p>
+              <StationPicker
+                stations={stations}
+                selectedId={peekId ?? policy.stationId}
+                onPick={(id) => setPeekId(id === policy.stationId ? null : id)}
+              />
+              {peekId !== null && peekId !== policy.stationId ? (
+                <div className="rise-in mt-3 rounded-2xl bg-card p-4 ring-1 ring-line">
+                  <div className="flex items-center justify-between gap-3">
+                    <StationBoard name={STATIONS[peekId].name} size="sm" />
+                    {stations?.[peekId] && <StatusPill status={stations[peekId].status} />}
+                  </div>
+                  <p className="mt-3 text-sm text-muted">
+                    Your pass covers {policyStation.name}. A demo wallet holds one pass at a time, so to protect a ride at{" "}
+                    {STATIONS[peekId].name}, start a new demo wallet.
+                  </p>
+                  <button className={PRIMARY_BUTTON} onClick={() => startOverAt(peekId)}>
+                    Protect a ride at {STATIONS[peekId].name}
+                  </button>
+                </div>
+              ) : (
+                <p className="mt-3 text-sm text-muted">
+                  One pass at a time per wallet. Tap any station to see it or protect a ride there too.
+                </p>
+              )}
             </div>
           </section>
         )}
