@@ -291,4 +291,7 @@ Build check: `npm run build` (zero errors, zero type errors) and `npx eslint app
 
 ## Team
 
-_TODO: names and roles._ Built at Monad Blitz Mumbai V4.
+- Anshul Yadav
+- Mrudula Jadhav
+
+Built at Monad Blitz Mumbai V4.
