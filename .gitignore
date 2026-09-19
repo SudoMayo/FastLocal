@@ -1,0 +1,9 @@
+.env
+.env.*
+!.env.example
+.secrets/
+node_modules/
+.next/
+out/
+cache/
+broadcast/
