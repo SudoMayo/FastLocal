@@ -116,8 +116,8 @@ cd web && npm run agent
 Extras:
 
 ```bash
-cd contracts && forge test                 # 27 contract tests
-cd web && npm run seed -- --count 20 --station 1   # 20 test wallets buy passes at Dadar
+(cd contracts && forge test)                          # 27 contract tests
+(cd web && npm run seed -- --count 20 --station 1)    # 20 test wallets buy passes at Dadar
 ```
 
 ### Troubleshooting
