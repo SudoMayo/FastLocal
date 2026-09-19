@@ -10,8 +10,17 @@ Instant disruption cover for Mumbai local train commuters. Tap once to protect y
 |---|---|
 | Live app | https://web-amber-seven-021mzgehda.vercel.app (phone page `/`, operator screen [`/screen`](https://web-amber-seven-021mzgehda.vercel.app/screen)) |
 | Testnet contract | [`0xB3b7ca84934aB1F2655179349452E9183e5D4C60`](https://testnet.monadvision.com/address/0xB3b7ca84934aB1F2655179349452E9183e5D4C60) on Monad Testnet (chain 10143), **verified** (Sourcify), deploy block 63835612 |
-| Demo video | _TODO: link_ |
 | Repo | https://github.com/SudoMayo/FastLocal |
+
+## Try it in 60 seconds
+
+1. Open https://web-amber-seven-021mzgehda.vercel.app on your phone. A demo wallet is created and funded with gas automatically.
+2. Pick a station and tap **Protect My Ride · Rs 10**. The screen shows **Ride protected**.
+3. The operator opens [`/screen`](https://web-amber-seven-021mzgehda.vercel.app/screen) (admin passcode), picks your station and a cause, and presses **Disrupt**.
+4. Nobody presses "pay". The autonomous agent pays you, and your phone turns green: **Rs 300 relief received**, with the transaction link.
+5. To try again, tap any station or **Start over with a new demo wallet** at the bottom of the page.
+
+Automatic payouts need the agent running (`npm run agent`) on the operator's machine. The screen's **Run payouts now** button is the backup.
 
 ## Problem
 
@@ -26,6 +35,15 @@ Instant disruption cover for Mumbai local train commuters. Tap once to protect y
 3. **Disruption.** The oracle marks the station DISRUPTED with a cause (stored on chain).
 4. **Autonomous payout.** The agent sees DISRUPTED + unpaid passes and pushes payouts. No human in the payout path.
 5. **Relief lands.** The phone turns green: "Rs 300 relief received", with the transaction link.
+
+## Design
+
+The UI uses a "Monsoon Mumbai" theme, kept simple for a crowded platform:
+
+- **Colors.** A night-ink background, monsoon sky-blue for actions, and station names on yellow Indian Railways-style boards. Status colors: running = slate, risk alert = amber, service stopped = rose with a pulse, paid = emerald.
+- **Phone.** One clear card per step: a 3-step setup card, then a station grid with live status, then a price card ("You pay Rs 10 / If service stops Rs 300"), then a ticket-style **Ride protected** pass with a live "watching" dot. When the cause is rain flooding, falling rain plays over the stopped card, with a progress bar while the payout is on its way. The payout arrives as a big green **Rs 300 relief received** card.
+- **Operator screen.** Readable from the back of a room: a big QR, a speed-proof banner, large station tiles with protected and paid counts, cause chips with icons, colored action buttons, and a health panel.
+- **Motion.** Animation is light and is switched off for users who prefer reduced motion. Errors are short and human, never raw RPC text.
 
 ## Disruption model
 
@@ -62,6 +80,8 @@ Parametric cover only works if hundreds of tiny payouts land fast and cheap, rig
 |---|---|
 | Autonomous agent, Dadar, 21 passes | 21 of 21 paid, all in blocks 63850784..63850791 (8 blocks). From the disruption block to the last payout: **24 blocks (7 s)**, including the agent's 2 s polling. |
 | Fallback `payoutBatch`, Kurla, 3 passes | 3 of 3 paid in one tx, **12 blocks (3 s)** after the disruption block. |
+| Agent, Sion, rain flooding, phone flow in the new UI | Paid **14 blocks (4 s)** after the disruption block. |
+| Hosted run (Vercel drip + Vercel admin route + local agent), Thane | Paid **17 blocks** after the disruption block. |
 | `buyPass` | 185,032 gas limit (207,308 for the first buyer at a station), about 0.019 to 0.021 MON at 102 to 103 gwei |
 | `payout` | 108,002 gas limit, about 0.011 MON |
 | `payoutBatch` (10 addresses) | 486,501 gas limit, about 0.005 MON per payout |
@@ -110,6 +130,20 @@ Keys: DEPLOYER = owner + oracle, RELAYER = gas drips, AGENT_WORKER = worker payo
 | `receive()` | anyone | Funds the vault. |
 
 Defaults: base premium 0.001 MON (Rs 10), payout 0.03 MON (Rs 300), waiting period 0, 6 stations (CSMT, Dadar, Kurla, Sion, Andheri, Thane). Display rate: 0.0001 MON = Rs 1 (demo rate).
+
+## Repo layout
+
+```
+contracts/                  Foundry project: src/FastLocalCore.sol, test/, script/Deploy.s.sol
+web/app/page.tsx            phone flow
+web/app/screen/page.tsx     operator + projector screen
+web/app/api/                drip, health, admin/station, admin/payout (server keys only)
+web/components/ui.tsx       station board, status pill, cause icons
+web/lib/                    config, ABI, types, contract reads, client helpers
+web/lib/server/             server wallet clients, payout engine
+web/scripts/                agent.ts (autonomous worker), seed.ts (load test)
+docs/PRD.md                 product requirements
+```
 
 ## Run locally
 
@@ -256,7 +290,7 @@ Build check: `npm run build` (zero errors, zero type errors) and `npx eslint app
 
 ## Business model and pre-market fit
 
-- **Pre-market fit:** _TODO: venue survey results (n = ?, % who lost money to a train stop, % who would pay Rs 10)._ Real passes bought on testnet today: _TODO: count from the screen._
+- **Pre-market fit:** 51 wallets bought passes on Monad Testnet during the event. Most were our own test and load-test wallets; the rest were phones at the venue. A venue survey is the next step.
 - **Revenue:** premium pool with a target loss ratio; B2B cover for employers and gig platforms; sponsored relief pools (brand-funded free passes); disruption data.
 - **Year-round:** rain in the monsoon; signal, power and track faults all year.
 - **Go-to-market:** 3 high-disruption stations, 1 employer partner, and a licensed insurance partner or a sponsored-relief model.
@@ -277,7 +311,8 @@ Build check: `npm run build` (zero errors, zero type errors) and `npx eslint app
 - **Stuck tx or timeout:** the engine re-syncs the nonce, bumps fees and retries with `payoutBatch`.
 - **Recipient rejects payment:** `payoutBatch` restores that pass, emits `PayoutFailed` and continues.
 - **Early CLEAR:** blocked on the screen and on the server while eligible passes are unpaid, unless forced.
-- **RPC errors:** phone and screen back off and retry. Phone reads are merged into one multicall per poll.
+- **RPC errors:** phone and screen back off and retry. Phone reads are merged into one multicall per poll. Setup retries a busy public RPC with backoff, and every error is shown as a short, human message.
+- **One pass per wallet:** while you hold a pass, you can still tap any station to see its live status. The **Protect a ride at {station}** button, or **Start over with a new demo wallet**, starts a new demo wallet; the old pass stays on chain.
 
 ## Limitations and next steps
 
