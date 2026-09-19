@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -15,6 +15,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "FastLocal",
   description: "When the local stops, FastLocal pays. Instant disruption cover for local train commuters on Monad.",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#070b14",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

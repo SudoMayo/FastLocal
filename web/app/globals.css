@@ -1,26 +1,97 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
+/* "Monsoon Mumbai" theme: night ink, monsoon sky-blue actions, railway-board yellow. */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-ink: #070b14;
+  --color-card: #0f1626;
+  --color-card-2: #141d31;
+  --color-line: #22304a;
+  --color-muted: #8b9ab3;
+  --color-monsoon: #38bdf8;
+  --color-monsoon-soft: #7dd3fc;
+  --color-board: #facc15;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(56, 189, 248, 0.12), transparent 60%),
+    radial-gradient(900px 500px at 110% 10%, rgba(250, 204, 21, 0.06), transparent 60%),
+    var(--color-ink);
+  background-attachment: fixed;
+  color: #e6edf7;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+/* Indian Railways style station name board. */
+.station-board {
+  background: var(--color-board);
+  color: #111;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 3px solid #111;
+  box-shadow: 0 0 0 2px var(--color-board);
+  border-radius: 6px;
+}
+
+/* Falling rain, shown when the cause is rain flooding. */
+.rain {
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(105deg, transparent 0 14px, rgba(125, 211, 252, 0.28) 14px 15px, transparent 15px 34px),
+    repeating-linear-gradient(105deg, transparent 0 22px, rgba(125, 211, 252, 0.16) 22px 23px, transparent 23px 51px);
+  background-size: 100% 140px;
+  animation: rain-fall 0.7s linear infinite;
+}
+@keyframes rain-fall {
+  from { background-position: 0 0, 0 0; }
+  to { background-position: -20px 140px, -30px 140px; }
+}
+
+/* Pop-in for the payout check mark. */
+.pop-in {
+  animation: pop-in 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+@keyframes pop-in {
+  from { transform: scale(0.4); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* Gentle rise for each new screen. */
+.rise-in {
+  animation: rise-in 0.35s ease-out both;
+}
+@keyframes rise-in {
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Indeterminate progress bar ("payout on its way"). */
+.progress-run {
+  background: linear-gradient(90deg, transparent, rgba(125, 211, 252, 0.9), transparent);
+  background-size: 40% 100%;
+  background-repeat: no-repeat;
+  animation: progress-run 1.2s ease-in-out infinite;
+}
+@keyframes progress-run {
+  from { background-position: -40% 0; }
+  to { background-position: 140% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rain,
+  .pop-in,
+  .rise-in,
+  .progress-run,
+  .animate-ping,
+  .animate-pulse,
+  .animate-spin {
+    animation: none !important;
+  }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-// Phone flow. Minimal functional UI; styling is owned by the UI teammate.
+// Phone flow. One clear card per state; logic above the JSX is unchanged.
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PrivateKeyAccount } from "viem/accounts";
 import {
@@ -17,6 +17,7 @@ import {
   buyPass,
   ensureFunded,
   findPayoutTx,
+  friendlyError,
   getOrCreateBurner,
   getPayoutAmount,
   getPolicy,
@@ -25,6 +26,18 @@ import {
   weiToRupees,
 } from "@/lib/fastlocal";
 import type { Cause, PhoneState, PolicyView, StationStatus } from "@/lib/types";
+import {
+  CauseIcon,
+  CheckIcon,
+  LiveDot,
+  ShieldIcon,
+  Spinner,
+  StationBoard,
+  STATUS_LABEL,
+  StatusDot,
+  StatusPill,
+  TrainMark,
+} from "@/components/ui";
 
 type StationState = { status: StationStatus; cause: Cause };
 type Boot = "creating" | "funding" | "error" | "done";
@@ -67,7 +80,7 @@ export default function PhonePage() {
       await ensureFunded(account.address);
       setBoot("done");
     } catch (err) {
-      setBootError(err instanceof Error ? err.message : String(err));
+      setBootError(friendlyError(err));
       setBoot("error");
     }
   }, []);
@@ -180,139 +193,300 @@ export default function PhonePage() {
   const policyStationState = policy ? stations?.[policy.stationId] : undefined;
   const payoutRs = payoutAmount !== null ? weiToRupees(payoutAmount) : 300;
 
+  const premiumRs = premium !== null ? weiToRupees(premium) : null;
+  const policyDisrupted = policyStationState?.status === "DISRUPTED";
+
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-6 bg-neutral-950 p-6 text-neutral-100">
-      <header>
-        <h1 className="text-3xl font-bold">FastLocal</h1>
-        <p className="text-neutral-400">When the local stops, FastLocal pays.</p>
+    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col px-5 pb-8 pt-6">
+      <header className="mb-6 flex items-center gap-3">
+        <TrainMark />
+        <div>
+          <h1 className="text-2xl font-extrabold tracking-tight">FastLocal</h1>
+          <p className="text-sm text-muted">When the local stops, FastLocal pays.</p>
+        </div>
       </header>
 
       {rpcTrouble && (
-        <p className="rounded bg-amber-900/40 p-2 text-sm text-amber-200">Network is slow. Retrying…</p>
+        <div role="status" className="mb-4 flex items-center gap-2 rounded-xl bg-amber-500/10 px-3 py-2 text-sm text-amber-200 ring-1 ring-amber-400/30">
+          <Spinner className="h-4 w-4" /> Network is slow. Retrying…
+        </div>
       )}
 
-      {state === "creating" && <p className="text-lg">Creating your demo wallet…</p>}
+      <div aria-live="polite" className="flex flex-1 flex-col gap-5">
+        {(state === "creating" || state === "funding") && <SetupCard state={state} />}
 
-      {state === "funding" && (
-        <p className="text-lg">Adding a little gas to your demo wallet… (takes a few seconds)</p>
-      )}
+        {state === "error" && (
+          <section className="rise-in rounded-3xl bg-rose-500/10 p-5 ring-1 ring-rose-400/40">
+            <p className="text-lg font-bold text-rose-100">Something went wrong</p>
+            <p className="mt-1 break-words text-rose-200/90">{bootError}</p>
+            <button className={PRIMARY_BUTTON} onClick={start}>
+              Try again
+            </button>
+          </section>
+        )}
 
-      {state === "error" && (
-        <section className="flex flex-col gap-3">
-          <p className="rounded bg-red-900/40 p-3 text-red-200">{bootError}</p>
-          <button className="rounded-xl bg-purple-600 p-4 text-lg font-semibold" onClick={start}>
-            Retry
-          </button>
-        </section>
-      )}
+        {(state === "ready" || state === "closed") && (
+          <section className="rise-in flex flex-col gap-5">
+            <div>
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted">Where do you board?</h2>
+              <StationPicker stations={stations} selectedId={stationId} onPick={chooseStation} />
+            </div>
 
-      {(state === "ready" || state === "closed") && (
-        <section className="flex flex-col gap-4">
-          <label className="flex flex-col gap-2">
-            <span className="text-sm text-neutral-400">Your station</span>
-            <select
-              className="rounded-xl bg-neutral-800 p-4 text-lg"
-              value={stationId}
-              onChange={(e) => chooseStation(Number(e.target.value))}
-            >
-              {STATIONS.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name} ({s.line}) {stations ? `: ${stations[s.id].status}` : ""}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <StationLine name={station.name} s={selected} />
-
-          {expired && <p className="text-sm text-neutral-400">Your last pass expired. You can buy a new one.</p>}
-
-          {state === "closed" ? (
-            <p className="rounded bg-red-900/40 p-4 text-lg text-red-200">
-              Sales closed at {station.name}
-              {selected && selected.cause !== "NONE" ? ` (${CAUSE_LABELS[selected.cause]})` : ""}.
-            </p>
-          ) : (
-            <>
-              {selected?.status === "ALERT" && (
-                <p className="rounded bg-amber-900/40 p-3 text-amber-200">
-                  High risk ({CAUSE_LABELS[selected.cause]}): price is 2x right now.
+            {state === "closed" ? (
+              <div className="relative overflow-hidden rounded-3xl bg-rose-500/10 p-5 ring-1 ring-rose-400/40">
+                {selected?.cause === "RAIN_FLOOD" && <div className="rain absolute inset-0" />}
+                <div className="relative flex flex-col items-start gap-3">
+                  <StationBoard name={station.name} />
+                  <p className="text-2xl font-extrabold text-rose-100">Sales closed at {station.name}</p>
+                  {selected && selected.cause !== "NONE" && (
+                    <p className="flex items-center gap-2 font-medium text-rose-200">
+                      <CauseIcon cause={selected.cause} /> {CAUSE_LABELS[selected.cause]}
+                    </p>
+                  )}
+                  <p className="text-sm text-muted">Service is stopped here right now. Pick another station to get covered.</p>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-3xl bg-card p-5 ring-1 ring-line">
+                <div className="flex items-center justify-between gap-3">
+                  <StationBoard name={station.name} />
+                  {selected && <StatusPill status={selected.status} />}
+                </div>
+                {selected?.status === "ALERT" && (
+                  <p className="mt-4 flex items-start gap-2 rounded-xl bg-amber-500/10 p-3 text-sm text-amber-200 ring-1 ring-amber-400/30">
+                    <CauseIcon cause={selected.cause} className="mt-0.5 h-5 w-5 shrink-0" />
+                    <span>
+                      <b>{CAUSE_LABELS[selected.cause]}</b> risk right now, so cover costs 2x.
+                    </span>
+                  </p>
+                )}
+                <div className="mt-5 grid grid-cols-2 gap-3">
+                  <Figure label="You pay" value={premiumRs !== null ? `Rs ${premiumRs}` : "…"} />
+                  <Figure label="If service stops" value={`Rs ${payoutRs}`} accent />
+                </div>
+                <p className="mt-3 text-sm text-muted">
+                  Covers you at {station.name} for 24 hours. Paid out automatically. No claim.
                 </p>
-              )}
-              <button
-                className="rounded-xl bg-purple-600 p-5 text-xl font-bold disabled:opacity-50"
-                onClick={onBuy}
-                disabled={premium === null || !stations}
-              >
-                Protect My Ride{premium !== null ? ` · Rs ${weiToRupees(premium)}` : ""}
-              </button>
-              <p className="text-sm text-neutral-400">
-                If service stops at {station.name}, Rs {payoutRs} lands in your wallet automatically. No claim.
-              </p>
-            </>
-          )}
-          {notice && <p className="rounded bg-neutral-800 p-3 text-amber-200">{notice}</p>}
-        </section>
-      )}
+                {expired && <p className="mt-2 text-sm text-muted">Your last pass expired. Buy a fresh one below.</p>}
+                <button className={PRIMARY_BUTTON} onClick={onBuy} disabled={premium === null || !stations}>
+                  Protect My Ride{premiumRs !== null ? ` · Rs ${premiumRs}` : ""}
+                </button>
+              </div>
+            )}
+            {notice && <Notice text={notice} />}
+          </section>
+        )}
 
-      {state === "buying" && <p className="text-lg">Protecting your ride…</p>}
+        {state === "buying" && (
+          <section className="rise-in flex flex-col items-center gap-4 rounded-3xl bg-card p-8 text-center ring-1 ring-line">
+            <Spinner className="h-10 w-10 text-monsoon" />
+            <p className="text-xl font-bold">Protecting your ride…</p>
+            <p className="text-sm text-muted">Confirming your pass on Monad. This takes a moment.</p>
+          </section>
+        )}
 
-      {state === "protected" && policy && policyStation && (
-        <section className="flex flex-col gap-3">
-          <p className="text-2xl font-bold text-purple-300">Your ride is protected</p>
-          <StationLine name={policyStation.name} s={policyStationState} />
-          {policyStationState?.status === "DISRUPTED" ? (
-            <p className="text-lg text-red-300">Disruption detected. Your Rs {payoutRs} relief is on its way…</p>
-          ) : (
-            <p className="text-neutral-300">
-              If service stops at {policyStation.name}, Rs {payoutRs} lands here automatically.
+        {state === "protected" && policy && policyStation && (
+          <section className="rise-in flex flex-col gap-4">
+            <div
+              className={`relative overflow-hidden rounded-3xl p-5 ring-1 ${
+                policyDisrupted ? "bg-rose-500/10 ring-rose-400/50" : "bg-card ring-monsoon/40"
+              }`}
+            >
+              {policyDisrupted && policyStationState?.cause === "RAIN_FLOOD" && <div className="rain absolute inset-0" />}
+              <div className="relative">
+                <div className="flex items-center justify-between gap-3">
+                  <StationBoard name={policyStation.name} />
+                  {policyStationState && <StatusPill status={policyStationState.status} />}
+                </div>
+
+                {policyDisrupted && policyStationState ? (
+                  <div className="mt-5">
+                    <p className="text-2xl font-extrabold text-rose-100">Service stopped</p>
+                    {policyStationState.cause !== "NONE" && (
+                      <p className="mt-1 flex items-center gap-2 font-medium text-rose-200">
+                        <CauseIcon cause={policyStationState.cause} /> {CAUSE_LABELS[policyStationState.cause]}
+                      </p>
+                    )}
+                    <p className="mt-4 text-lg font-semibold">Your Rs {payoutRs} relief is on its way…</p>
+                    <div className="progress-run mt-3 h-1.5 w-full rounded-full bg-white/10" />
+                  </div>
+                ) : (
+                  <div className="mt-5">
+                    <div className="flex items-center gap-3">
+                      <ShieldIcon className="h-11 w-11 text-monsoon" />
+                      <div>
+                        <p className="text-2xl font-extrabold">Ride protected</p>
+                        <p className="flex items-center gap-2 text-sm text-muted">
+                          <LiveDot /> Watching {policyStation.name} live
+                        </p>
+                      </div>
+                    </div>
+                    <p className="mt-4 text-muted">
+                      If service stops, <b className="text-white">Rs {payoutRs}</b> lands in your wallet automatically.
+                    </p>
+                  </div>
+                )}
+
+                <dl className="mt-5 grid grid-cols-2 gap-3 border-t border-dashed border-line pt-4 text-sm">
+                  <div>
+                    <dt className="text-muted">Valid until</dt>
+                    <dd className="font-semibold">
+                      {new Date(policy.expiry * 1000).toLocaleString([], {
+                        day: "numeric",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted">Cover</dt>
+                    <dd className="font-semibold">Rs {payoutRs}</dd>
+                  </div>
+                </dl>
+                {buyTx && (
+                  <a className="mt-4 inline-block text-sm font-medium text-monsoon hover:underline" href={txUrl(buyTx)} target="_blank" rel="noreferrer">
+                    View pass transaction ↗
+                  </a>
+                )}
+              </div>
+            </div>
+            {notice && <Notice text={notice} />}
+          </section>
+        )}
+
+        {state === "paid" && policy && policyStation && (
+          <section className="rise-in relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-400 to-teal-600 p-6 text-emerald-950 shadow-[0_20px_60px_-20px_rgba(16,185,129,0.8)]">
+            <div className="pop-in mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white/90">
+              <CheckIcon className="h-9 w-9 text-emerald-600" />
+            </div>
+            <p className="mt-4 text-center text-sm font-bold uppercase tracking-widest">Relief received</p>
+            <p className="text-center text-6xl font-black tracking-tight">Rs {payoutRs}</p>
+            <p className="mt-2 text-center font-medium">
+              {policyStation.name}
+              {policyStationState && policyStationState.cause !== "NONE" ? ` · ${CAUSE_LABELS[policyStationState.cause]}` : ""}. No claim needed.
             </p>
-          )}
-          <p className="text-sm text-neutral-500">
-            Valid until {new Date(policy.expiry * 1000).toLocaleString()}
-          </p>
-          {buyTx && (
-            <a className="text-sm text-purple-300 underline" href={txUrl(buyTx)} target="_blank" rel="noreferrer">
-              View pass transaction
+            <a
+              className="mt-5 block rounded-2xl bg-emerald-950/15 px-4 py-3 text-center font-semibold hover:bg-emerald-950/25"
+              href={payoutTx ? txUrl(payoutTx) : account ? addressUrl(account.address) : "#"}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {payoutTx ? "View payout transaction ↗" : "View on explorer ↗"}
             </a>
-          )}
-          {notice && <p className="rounded bg-neutral-800 p-3 text-amber-200">{notice}</p>}
-        </section>
-      )}
+            <button
+              className="mt-3 w-full rounded-2xl bg-emerald-950 px-4 py-4 font-bold text-emerald-50 transition active:scale-[0.98]"
+              onClick={() => setWantNewPass(true)}
+            >
+              Protect another ride
+            </button>
+          </section>
+        )}
+      </div>
 
-      {state === "paid" && policy && policyStation && (
-        <section className="flex flex-col gap-3 rounded-xl bg-green-700 p-5">
-          <p className="text-3xl font-bold">Rs {payoutRs} relief received</p>
-          <p>
-            {policyStation.name}
-            {policyStationState && policyStationState.cause !== "NONE"
-              ? `: ${CAUSE_LABELS[policyStationState.cause]}`
-              : ""}
-          </p>
+      {account && (
+        <footer className="mt-8 flex flex-col items-center gap-2 text-center text-xs text-muted">
           <a
-            className="underline"
-            href={payoutTx ? txUrl(payoutTx) : account ? addressUrl(account.address) : "#"}
+            className="inline-flex items-center gap-2 rounded-full bg-card px-3 py-1.5 ring-1 ring-line hover:ring-monsoon/50"
+            href={addressUrl(account.address)}
             target="_blank"
             rel="noreferrer"
           >
-            {payoutTx ? "View payout transaction" : "View on explorer"}
+            <span className="h-2 w-2 rounded-full bg-monsoon" />
+            Demo wallet{isNewWallet ? " (new)" : ""} · {account.address.slice(0, 6)}…{account.address.slice(-4)}
           </a>
-          <button className="rounded-xl bg-neutral-900 p-4 font-semibold" onClick={() => setWantNewPass(true)}>
-            Protect another ride
-          </button>
-        </section>
-      )}
-
-      {account && (
-        <footer className="mt-auto text-xs text-neutral-500">
-          Demo wallet{isNewWallet ? " (new)" : ""}:{" "}
-          <a className="underline" href={addressUrl(account.address)} target="_blank" rel="noreferrer">
-            {account.address.slice(0, 6)}…{account.address.slice(-4)}
-          </a>{" "}
-          · testnet MON at a demo rate (0.0001 MON = Rs 1)
+          <span>Monad testnet · demo rate 0.0001 MON = Rs 1</span>
         </footer>
       )}
     </main>
+  );
+}
+
+const PRIMARY_BUTTON =
+  "mt-5 w-full rounded-2xl bg-monsoon px-5 py-4 text-lg font-bold text-ink shadow-[0_10px_30px_-10px_rgba(56,189,248,0.8)] transition hover:bg-monsoon-soft active:scale-[0.98] disabled:opacity-50";
+
+function SetupCard({ state }: { state: "creating" | "funding" }) {
+  const steps = [
+    { label: "Create your demo wallet", status: state === "creating" ? "active" : "done" },
+    { label: "Add a little gas, free", status: state === "funding" ? "active" : "pending" },
+    { label: "Pick your station", status: "pending" },
+  ] as const;
+  return (
+    <section className="rise-in rounded-3xl bg-card p-6 ring-1 ring-line">
+      <p className="text-xl font-bold">Getting you ready</p>
+      <p className="mt-1 text-sm text-muted">No app, no crypto wallet needed. Takes a few seconds.</p>
+      <ol className="mt-5 flex flex-col gap-4">
+        {steps.map((s) => (
+          <li key={s.label} className="flex items-center gap-3">
+            {s.status === "done" ? (
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-300">
+                <CheckIcon className="h-4 w-4" />
+              </span>
+            ) : s.status === "active" ? (
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-monsoon/15 text-monsoon">
+                <Spinner className="h-4 w-4" />
+              </span>
+            ) : (
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/5 ring-1 ring-line" />
+            )}
+            <span className={s.status === "pending" ? "text-muted" : "font-medium"}>{s.label}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+function StationPicker({
+  stations,
+  selectedId,
+  onPick,
+}: {
+  stations: StationState[] | null;
+  selectedId: number;
+  onPick: (id: number) => void;
+}) {
+  return (
+    <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Station">
+      {STATIONS.map((s) => {
+        const status = stations?.[s.id]?.status ?? "CLEAR";
+        const active = s.id === selectedId;
+        return (
+          <button
+            key={s.id}
+            role="radio"
+            aria-checked={active}
+            onClick={() => onPick(s.id)}
+            className={`flex min-h-16 flex-col items-start justify-between gap-1 rounded-2xl p-3 text-left transition active:scale-[0.97] ${
+              active ? "bg-card-2 ring-2 ring-monsoon" : "bg-card ring-1 ring-line hover:ring-monsoon/50"
+            }`}
+          >
+            <span className="font-bold">{s.name}</span>
+            <span className="flex items-center gap-1.5 text-[11px] leading-none text-muted">
+              <StatusDot status={status} className="scale-75" />
+              {stations ? STATUS_LABEL[status] : "…"}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function Figure({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
+  return (
+    <div className="rounded-2xl bg-ink/60 p-3 ring-1 ring-line">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">{label}</p>
+      <p className={`mt-1 text-2xl font-extrabold ${accent ? "text-emerald-300" : ""}`}>{value}</p>
+    </div>
+  );
+}
+
+function Notice({ text }: { text: string }) {
+  return (
+    <p role="alert" className="rounded-xl bg-amber-500/10 p-3 text-sm text-amber-200 ring-1 ring-amber-400/30">
+      {text}
+    </p>
   );
 }
 
@@ -324,15 +498,4 @@ function savedStation(): number | null {
   } catch {
     return null;
   }
-}
-
-function StationLine({ name, s }: { name: string; s?: StationState }) {
-  if (!s) return <p className="text-neutral-400">{name}: loading…</p>;
-  const color = s.status === "DISRUPTED" ? "text-red-400" : s.status === "ALERT" ? "text-amber-400" : "text-neutral-300";
-  return (
-    <p className={`text-lg ${color}`}>
-      {name}: {s.status}
-      {s.cause !== "NONE" ? ` · ${CAUSE_LABELS[s.cause]}` : ""}
-    </p>
-  );
 }

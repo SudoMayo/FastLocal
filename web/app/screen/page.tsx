@@ -1,6 +1,6 @@
 "use client";
 
-// Operator + big screen. Minimal functional UI; styling is owned by the UI teammate.
+// Operator + big screen (projector). Logic above the JSX is unchanged.
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import {
@@ -15,6 +15,15 @@ import {
 import { isPolicyEligible } from "@/lib/contract";
 import { getAllSnapshots, getBlockTime } from "@/lib/fastlocal";
 import type { Cause, Health, StationSnapshot, StationStatus } from "@/lib/types";
+import {
+  CauseIcon,
+  CheckIcon,
+  LiveDot,
+  Spinner,
+  StationBoard,
+  StatusPill,
+  TrainMark,
+} from "@/components/ui";
 
 // Thresholds for health warnings.
 const RELAYER_MIN_MON = 10.5; // 10 MON Monad reserve + room for drips
@@ -215,156 +224,254 @@ export default function ScreenPage() {
   const clearBlocked = !!selected && selected.snapshot.status === "DISRUPTED" && selected.eligibleUnpaid > 0 && !force;
   const shownProof = proof && proof.stationId === stationId && proofKey ? proof : null;
 
+  const totalPaid = stats?.reduce((n, s) => n + s.paidThisDisruption, 0) ?? 0;
+  const selectedStatus = selected?.snapshot.status;
+  const paying = !!selected && selected.snapshot.status === "DISRUPTED" && selected.eligibleUnpaid > 0;
+
   if (!passcode) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-neutral-950 p-6 text-neutral-100">
+      <main className="flex min-h-screen items-center justify-center p-6">
         <form
-          className="flex w-full max-w-sm flex-col gap-3"
+          className="rise-in flex w-full max-w-sm flex-col gap-4 rounded-3xl bg-card p-7 ring-1 ring-line"
           onSubmit={(e) => {
             e.preventDefault();
             writePass(passInput.trim());
           }}
         >
-          <h1 className="text-2xl font-bold">FastLocal operator</h1>
+          <div className="flex items-center gap-3">
+            <TrainMark className="h-10 w-10" />
+            <div>
+              <h1 className="text-xl font-extrabold">FastLocal operator</h1>
+              <p className="text-sm text-muted">Enter the admin passcode</p>
+            </div>
+          </div>
           <input
-            className="rounded bg-neutral-800 p-3"
+            className="rounded-xl bg-ink px-4 py-3 ring-1 ring-line outline-none focus:ring-2 focus:ring-monsoon"
             type="password"
             placeholder="Admin passcode"
+            autoFocus
             value={passInput}
             onChange={(e) => setPassInput(e.target.value)}
           />
-          <button className="rounded bg-purple-600 p-3 font-semibold">Enter</button>
+          <button className="rounded-xl bg-monsoon py-3 font-bold text-ink transition hover:bg-monsoon-soft active:scale-[0.98]">
+            Open screen
+          </button>
         </form>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-neutral-950 p-6 text-neutral-100">
-      <header className="mb-6 flex items-start justify-between gap-6">
-        <div>
-          <h1 className="text-5xl font-bold">FastLocal</h1>
-          <p className="text-xl text-neutral-400">When the local stops, FastLocal pays.</p>
-          {rpcTrouble && <p className="mt-2 text-amber-300">RPC slow, retrying…</p>}
+    <main className="mx-auto w-full max-w-[1600px] px-6 py-6 lg:px-10">
+      {/* ---------- Header + QR ---------- */}
+      <header className="mb-6 flex flex-wrap items-center justify-between gap-6">
+        <div className="flex items-center gap-4">
+          <TrainMark className="h-16 w-16" />
+          <div>
+            <h1 className="text-5xl font-black tracking-tight">FastLocal</h1>
+            <p className="text-xl text-muted">When the local stops, FastLocal pays.</p>
+          </div>
         </div>
         {origin && (
-          <div className="flex flex-col items-center gap-2 rounded-xl bg-white p-3 text-neutral-900">
-            <QRCodeSVG value={origin} size={160} />
-            <span className="text-sm font-semibold">Scan to protect your ride</span>
+          <div className="flex items-center gap-4 rounded-3xl bg-white p-3 pr-6 text-ink shadow-[0_20px_60px_-25px_rgba(56,189,248,0.8)]">
+            <QRCodeSVG value={origin} size={148} />
+            <div>
+              <p className="text-2xl font-extrabold leading-tight">Scan to protect</p>
+              <p className="text-2xl font-extrabold leading-tight">your ride</p>
+              <p className="mt-1 text-sm font-medium text-slate-600">Rs 10 cover · Rs 300 relief</p>
+            </div>
           </div>
         )}
       </header>
 
-      {shownProof && (
-        <p className="mb-6 rounded-xl bg-green-800 p-5 text-4xl font-bold">
-          All {shownProof.count} payouts landed within {shownProof.blocks} blocks (
-          {shownProof.seconds < 1 ? "under 1 s" : `${shownProof.seconds} s`})
-        </p>
-      )}
-      {selected && selected.snapshot.status === "DISRUPTED" && selected.eligibleUnpaid > 0 && (
-        <p className="mb-6 rounded-xl bg-red-900 p-5 text-3xl font-bold">
-          {STATIONS[stationId].name}: {selected.paidThisDisruption} paid, {selected.eligibleUnpaid} waiting…
+      {rpcTrouble && (
+        <p className="mb-4 flex items-center gap-2 rounded-xl bg-amber-500/10 px-4 py-2 text-amber-200 ring-1 ring-amber-400/30">
+          <Spinner className="h-4 w-4" /> RPC slow, retrying…
         </p>
       )}
 
-      <section className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-3">
+      {/* ---------- Hero: speed proof, live payout, or totals ---------- */}
+      {shownProof ? (
+        <section className="rise-in mb-6 flex flex-wrap items-center gap-5 rounded-3xl bg-gradient-to-r from-emerald-400 to-teal-500 p-6 text-emerald-950 shadow-[0_25px_70px_-30px_rgba(16,185,129,0.9)]">
+          <span className="pop-in flex h-16 w-16 items-center justify-center rounded-full bg-white/90">
+            <CheckIcon className="h-10 w-10 text-emerald-600" />
+          </span>
+          <div>
+            <p className="text-lg font-bold uppercase tracking-widest">{STATIONS[shownProof.stationId].name} · paid on chain</p>
+            <p className="text-4xl font-black lg:text-5xl">
+              {shownProof.count === 1 ? "The payout" : `All ${shownProof.count} payouts`} landed within {shownProof.blocks} blocks (
+              {shownProof.seconds < 1 ? "under 1 s" : `${shownProof.seconds} s`})
+            </p>
+          </div>
+        </section>
+      ) : paying && selected ? (
+        <section className="rise-in relative mb-6 overflow-hidden rounded-3xl bg-rose-500/15 p-6 ring-2 ring-rose-400/60">
+          {selected.snapshot.cause === "RAIN_FLOOD" && <div className="rain absolute inset-0" />}
+          <div className="relative">
+            <p className="flex items-center gap-2 text-lg font-bold uppercase tracking-widest text-rose-200">
+              <CauseIcon cause={selected.snapshot.cause} /> {STATIONS[stationId].name} · {CAUSE_LABELS[selected.snapshot.cause]}
+            </p>
+            <p className="text-5xl font-black">
+              {selected.paidThisDisruption} paid · {selected.eligibleUnpaid} on the way…
+            </p>
+            <div className="progress-run mt-4 h-2 w-full rounded-full bg-white/10" />
+          </div>
+        </section>
+      ) : (
+        <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <BigStat label="Rides protected now" value={stats ? String(totalProtected) : "–"} />
+          <BigStat label="Paid in last disruptions" value={stats ? String(totalPaid) : "–"} tone="emerald" />
+          <BigStat label="Vault can pay" value={health ? `${health.vaultCoverage} more` : "–"} tone="monsoon" />
+        </section>
+      )}
+
+      {/* ---------- Station tiles ---------- */}
+      <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-3">
         {STATIONS.map((st) => {
           const s = stats?.[st.id];
           const status = s?.snapshot.status ?? "CLEAR";
-          const color = status === "DISRUPTED" ? "bg-red-900 animate-pulse" : status === "ALERT" ? "bg-amber-800" : "bg-neutral-800";
+          const tone =
+            status === "DISRUPTED"
+              ? "bg-rose-500/15 ring-rose-400/60"
+              : status === "ALERT"
+                ? "bg-amber-500/10 ring-amber-400/50"
+                : "bg-card ring-line";
           return (
             <button
               key={st.id}
-              className={`rounded-xl p-4 text-left ${color} ${st.id === stationId ? "ring-4 ring-purple-500" : ""}`}
               onClick={() => setStationId(st.id)}
+              className={`relative overflow-hidden rounded-3xl p-5 text-left ring-1 transition hover:brightness-110 ${tone} ${
+                st.id === stationId ? "outline outline-4 outline-offset-2 outline-monsoon" : ""
+              }`}
             >
-              <div className="text-2xl font-bold">{st.name}</div>
-              <div className="text-lg">
-                {status}
-                {s && s.snapshot.cause !== "NONE" ? ` · ${CAUSE_LABELS[s.snapshot.cause]}` : ""}
+              {status === "DISRUPTED" && s?.snapshot.cause === "RAIN_FLOOD" && <div className="rain absolute inset-0" />}
+              <div className="relative">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <StationBoard name={st.name} />
+                  <StatusPill status={status} size="lg" />
+                </div>
+                <p className="mt-2 flex h-6 items-center gap-2 text-sm text-muted">
+                  {s && s.snapshot.cause !== "NONE" ? (
+                    <>
+                      <CauseIcon cause={s.snapshot.cause} className="h-4 w-4" /> {CAUSE_LABELS[s.snapshot.cause]}
+                    </>
+                  ) : (
+                    st.line
+                  )}
+                </p>
+                <div className="mt-3 flex items-end gap-6">
+                  <div>
+                    <p className="text-6xl font-black leading-none">{s?.protectedCount ?? "–"}</p>
+                    <p className="mt-1 text-sm text-muted">protected now</p>
+                  </div>
+                  <div>
+                    <p className="text-4xl font-extrabold leading-none text-emerald-300">{s?.paidThisDisruption ?? "–"}</p>
+                    <p className="mt-1 text-sm text-muted">paid (last disruption)</p>
+                  </div>
+                </div>
               </div>
-              <div className="mt-2 text-5xl font-bold">{s?.protectedCount ?? "–"}</div>
-              <div className="text-sm text-neutral-300">protected now</div>
-              <div className="mt-1 text-2xl font-semibold text-green-300">{s?.paidThisDisruption ?? "–"}</div>
-              <div className="text-sm text-neutral-300">paid (last disruption)</div>
             </button>
           );
         })}
       </section>
 
-      <section className="mb-8 flex flex-col gap-3 rounded-xl bg-neutral-900 p-4">
-        <h2 className="text-xl font-semibold">Controls: {STATIONS[stationId].name}</h2>
-        <div className="flex flex-wrap items-center gap-3">
-          <select className="rounded bg-neutral-800 p-3" value={stationId} onChange={(e) => setStationId(Number(e.target.value))}>
+      {/* ---------- Operator controls ---------- */}
+      <section className="mb-6 rounded-3xl bg-card p-5 ring-1 ring-line">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="flex items-center gap-3 text-xl font-bold">
+            Operator <StationBoard name={STATIONS[stationId].name} size="sm" />
+            {selectedStatus && <StatusPill status={selectedStatus} />}
+          </h2>
+          <select
+            className="rounded-xl bg-ink px-3 py-2 ring-1 ring-line"
+            value={stationId}
+            onChange={(e) => setStationId(Number(e.target.value))}
+            aria-label="Station"
+          >
             {STATIONS.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
               </option>
             ))}
           </select>
-          <select className="rounded bg-neutral-800 p-3" value={cause} onChange={(e) => setCause(e.target.value as Cause)}>
-            {CAUSES.filter((c) => c !== "NONE").map((c) => (
-              <option key={c} value={c}>
-                {CAUSE_LABELS[c]}
-              </option>
-            ))}
-          </select>
-          <button className="rounded bg-amber-600 px-5 py-3 font-bold disabled:opacity-50" disabled={!!busy} onClick={() => setStation("ALERT")}>
-            {busy === "ALERT" ? "…" : "ALERT"}
-          </button>
-          <button className="rounded bg-red-600 px-5 py-3 font-bold disabled:opacity-50" disabled={!!busy} onClick={() => setStation("DISRUPTED")}>
-            {busy === "DISRUPTED" ? "…" : "DISRUPT"}
-          </button>
-          <button
-            className="rounded bg-neutral-600 px-5 py-3 font-bold disabled:opacity-50"
-            disabled={!!busy || clearBlocked}
-            onClick={() => setStation("CLEAR")}
-          >
-            {busy === "CLEAR" ? "…" : "CLEAR"}
-          </button>
-          <button className="rounded bg-purple-600 px-5 py-3 font-bold disabled:opacity-50" disabled={!!busy} onClick={runPayouts}>
-            {busy === "PAYOUT" ? "Paying…" : "Run payouts now"}
-          </button>
         </div>
+
+        <p className="mt-4 mb-2 text-xs font-semibold uppercase tracking-widest text-muted">Cause</p>
+        <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Cause">
+          {CAUSES.filter((c) => c !== "NONE").map((c) => (
+            <button
+              key={c}
+              role="radio"
+              aria-checked={cause === c}
+              onClick={() => setCause(c)}
+              className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold ring-1 transition ${
+                cause === c ? "bg-monsoon text-ink ring-monsoon" : "bg-ink text-slate-200 ring-line hover:ring-monsoon/50"
+              }`}
+            >
+              <CauseIcon cause={c} className="h-4 w-4" /> {CAUSE_LABELS[c]}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
+          <ActionButton tone="amber" busy={busy === "ALERT"} disabled={!!busy} onClick={() => setStation("ALERT")}>
+            Alert · 2x price
+          </ActionButton>
+          <ActionButton tone="rose" busy={busy === "DISRUPTED"} disabled={!!busy} onClick={() => setStation("DISRUPTED")}>
+            Disrupt
+          </ActionButton>
+          <ActionButton tone="slate" busy={busy === "CLEAR"} disabled={!!busy || clearBlocked} onClick={() => setStation("CLEAR")}>
+            Clear
+          </ActionButton>
+          <ActionButton tone="monsoon" busy={busy === "PAYOUT"} disabled={!!busy} onClick={runPayouts}>
+            Run payouts now
+          </ActionButton>
+        </div>
+
         {selected && selected.snapshot.status === "DISRUPTED" && selected.eligibleUnpaid > 0 && (
-          <label className="flex items-center gap-2 text-amber-300">
-            <input type="checkbox" checked={force} onChange={(e) => setForce(e.target.checked)} />
-            {selected.eligibleUnpaid} eligible passes are unpaid. Force CLEAR anyway.
+          <label className="mt-4 flex items-center gap-2 text-amber-300">
+            <input type="checkbox" className="h-4 w-4 accent-amber-400" checked={force} onChange={(e) => setForce(e.target.checked)} />
+            {selected.eligibleUnpaid} eligible passes are unpaid. Force clear anyway.
           </label>
         )}
         {message && (
-          <p className="text-neutral-200">
+          <p className="mt-4 rounded-xl bg-ink px-4 py-3 text-slate-200 ring-1 ring-line">
             {message}{" "}
             {lastTx && (
-              <a className="text-purple-300 underline" href={txUrl(lastTx)} target="_blank" rel="noreferrer">
-                tx
+              <a className="font-semibold text-monsoon hover:underline" href={txUrl(lastTx)} target="_blank" rel="noreferrer">
+                View tx ↗
               </a>
             )}
           </p>
         )}
       </section>
 
-      <section className="rounded-xl bg-neutral-900 p-4">
-        <h2 className="mb-2 text-xl font-semibold">Health</h2>
+      {/* ---------- Health ---------- */}
+      <section className="rounded-3xl bg-card p-5 ring-1 ring-line">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-xl font-bold">
+            <LiveDot className={warnings.length ? "bg-amber-400" : "bg-emerald-400"} /> System health
+          </h2>
+          <button className="text-sm text-muted hover:text-white" onClick={() => writePass("")}>
+            Lock screen
+          </button>
+        </div>
         {health ? (
-          <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
             <Stat label="Vault" value={`${fmt(health.vaultMon)} MON`} />
             <Stat label="Vault covers" value={`${health.vaultCoverage} payouts`} />
-            <Stat label="Relayer" value={`${fmt(health.relayerMon)} MON`} />
+            <Stat label="Relayer (gas drips)" value={`${fmt(health.relayerMon)} MON`} />
             <Stat label="Agent worker" value={`${fmt(health.agentWorkerMon)} MON`} />
             <Stat label="Agent fallback" value={`${fmt(health.agentServerMon)} MON`} />
           </div>
         ) : (
-          <p className="text-neutral-400">Loading…</p>
+          <p className="text-muted">Loading…</p>
         )}
         {warnings.map((w) => (
-          <p key={w} className="mt-2 rounded bg-amber-900/50 p-2 text-amber-200">
+          <p key={w} className="mt-3 rounded-xl bg-amber-500/10 px-4 py-2 text-amber-200 ring-1 ring-amber-400/30">
             {w}
           </p>
         ))}
-        <button className="mt-4 text-sm text-neutral-500 underline" onClick={() => writePass("")}>
-          Lock screen
-        </button>
       </section>
     </main>
   );
@@ -390,11 +497,54 @@ function fmt(mon: string): string {
   return Number(mon).toFixed(3);
 }
 
+
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded bg-neutral-800 p-3">
-      <div className="text-sm text-neutral-400">{label}</div>
-      <div className="text-xl font-semibold">{value}</div>
+    <div className="rounded-2xl bg-ink p-4 ring-1 ring-line">
+      <div className="text-sm text-muted">{label}</div>
+      <div className="mt-1 text-2xl font-bold">{value}</div>
     </div>
+  );
+}
+
+function BigStat({ label, value, tone = "white" }: { label: string; value: string; tone?: "white" | "emerald" | "monsoon" }) {
+  const color = tone === "emerald" ? "text-emerald-300" : tone === "monsoon" ? "text-monsoon" : "text-white";
+  return (
+    <div className="rounded-3xl bg-card p-5 ring-1 ring-line">
+      <p className="text-sm font-semibold uppercase tracking-widest text-muted">{label}</p>
+      <p className={`mt-1 text-6xl font-black ${color}`}>{value}</p>
+    </div>
+  );
+}
+
+const ACTION_TONES = {
+  amber: "bg-amber-500 text-amber-950 hover:bg-amber-400",
+  rose: "bg-rose-600 text-white hover:bg-rose-500",
+  slate: "bg-slate-600 text-white hover:bg-slate-500",
+  monsoon: "bg-monsoon text-ink hover:bg-monsoon-soft",
+} as const;
+
+function ActionButton({
+  tone,
+  busy,
+  disabled,
+  onClick,
+  children,
+}: {
+  tone: keyof typeof ACTION_TONES;
+  busy: boolean;
+  disabled: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      className={`flex items-center justify-center gap-2 rounded-2xl px-4 py-4 text-lg font-bold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 ${ACTION_TONES[tone]}`}
+      disabled={disabled}
+      onClick={onClick}
+    >
+      {busy && <Spinner className="h-5 w-5" />}
+      {children}
+    </button>
   );
 }

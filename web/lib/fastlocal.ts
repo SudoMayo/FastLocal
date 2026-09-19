@@ -40,9 +40,35 @@ export function getOrCreateBurner(): { account: PrivateKeyAccount; isNew: boolea
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** Retries a read with backoff (1 s, 2 s, 4 s) so a busy public RPC does not fail setup. */
+async function withBackoff<T>(read: () => Promise<T>, attempts = 4): Promise<T> {
+  for (let i = 0; ; i++) {
+    try {
+      return await read();
+    } catch (err) {
+      if (i >= attempts - 1) throw err;
+      await sleep(1_000 * 2 ** i);
+    }
+  }
+}
+
+/** Short, human error text. Raw RPC errors are long and unreadable on a phone. */
+export function friendlyError(err: unknown): string {
+  const text = errorText(err);
+  const lower = text.toLowerCase();
+  if (lower.includes("limit") || lower.includes("429") || lower.includes("too many")) {
+    return "The network is busy right now. Tap Try again in a few seconds.";
+  }
+  if (lower.includes("fetch failed") || lower.includes("failed to fetch") || lower.includes("http request failed")) {
+    return "Could not reach the network. Check your connection and tap Try again.";
+  }
+  const first = (err instanceof Error ? err.message : String(err)).split("\n")[0];
+  return first.length > 160 ? `${first.slice(0, 157)}…` : first;
+}
+
 /** Makes sure the burner has gas. Asks /api/drip once, then waits for the balance. */
 export async function ensureFunded(address: `0x${string}`): Promise<bigint> {
-  const balance = await client.getBalance({ address });
+  const balance = await withBackoff(() => client.getBalance({ address }));
   if (balance > 0n) return balance;
 
   const res = await fetch("/api/drip", {
@@ -54,7 +80,7 @@ export async function ensureFunded(address: `0x${string}`): Promise<bigint> {
   if (!data.ok) throw new Error(data.error || "Drip failed");
 
   for (let i = 0; i < 30; i++) {
-    const b = await client.getBalance({ address });
+    const b = await client.getBalance({ address }).catch(() => 0n); // keep waiting through RPC hiccups
     if (b > 0n) return b;
     await sleep(1_000);
   }
@@ -138,7 +164,7 @@ function toBuyError(err: unknown): BuyError {
   if (reason === "Sales closed") return new BuyError("SALES_CLOSED", "Sales just closed at this station.");
   if (reason === "Sales paused") return new BuyError("SALES_PAUSED", "Pass sales are paused right now.");
   if (text.includes("insufficient")) return new BuyError("LOW_BALANCE", "Your demo wallet is out of gas money.");
-  return new BuyError("UNKNOWN", errorText(err));
+  return new BuyError("UNKNOWN", friendlyError(err));
 }
 
 function revertReason(err: unknown): string | null {
