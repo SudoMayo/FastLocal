@@ -38,6 +38,14 @@ export function getOrCreateBurner(): { account: PrivateKeyAccount; isNew: boolea
   return { account: privateKeyToAccount(fresh), isNew: true };
 }
 
+/** Forgets the demo wallet so the next load creates a new one. Old passes stay on chain. */
+export function resetBurner() {
+  memoryKey = null;
+  try {
+    localStorage.removeItem(BURNER_KEY);
+  } catch {}
+}
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** Retries a read with backoff (1 s, 2 s, 4 s) so a busy public RPC does not fail setup. */

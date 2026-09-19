@@ -23,6 +23,7 @@ import {
   getPolicy,
   getPremium,
   getStatuses,
+  resetBurner,
   weiToRupees,
 } from "@/lib/fastlocal";
 import type { Cause, PhoneState, PolicyView, StationStatus } from "@/lib/types";
@@ -352,6 +353,13 @@ export default function PhonePage() {
               </div>
             </div>
             {notice && <Notice text={notice} />}
+            <div>
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted">Live status, all stations</h2>
+              <StationPicker stations={stations} selectedId={policy.stationId} />
+              <p className="mt-3 text-sm text-muted">
+                One pass at a time per wallet. When this pass pays out or expires, you can pick any station again.
+              </p>
+            </div>
           </section>
         )}
 
@@ -396,6 +404,17 @@ export default function PhonePage() {
             Demo wallet{isNewWallet ? " (new)" : ""} · {account.address.slice(0, 6)}…{account.address.slice(-4)}
           </a>
           <span>Monad testnet · demo rate 0.0001 MON = Rs 1</span>
+          <button
+            className="mt-1 text-muted underline-offset-4 hover:text-white hover:underline"
+            onClick={() => {
+              if (confirm("Start over with a new demo wallet? Your current pass stays on chain but this phone will stop tracking it.")) {
+                resetBurner();
+                window.location.reload();
+              }
+            }}
+          >
+            Start over with a new demo wallet
+          </button>
         </footer>
       )}
     </main>
@@ -444,29 +463,39 @@ function StationPicker({
 }: {
   stations: StationState[] | null;
   selectedId: number;
-  onPick: (id: number) => void;
+  onPick?: (id: number) => void; // omit for a view-only list
 }) {
   return (
-    <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Station">
+    <div className="grid grid-cols-3 gap-2" role={onPick ? "radiogroup" : "list"} aria-label="Stations">
       {STATIONS.map((s) => {
         const status = stations?.[s.id]?.status ?? "CLEAR";
         const active = s.id === selectedId;
-        return (
-          <button
-            key={s.id}
-            role="radio"
-            aria-checked={active}
-            onClick={() => onPick(s.id)}
-            className={`flex min-h-16 flex-col items-start justify-between gap-1 rounded-2xl p-3 text-left transition active:scale-[0.97] ${
-              active ? "bg-card-2 ring-2 ring-monsoon" : "bg-card ring-1 ring-line hover:ring-monsoon/50"
-            }`}
-          >
+        const tile = `flex min-h-16 flex-col items-start justify-between gap-1 rounded-2xl p-3 text-left ${
+          active ? "bg-card-2 ring-2 ring-monsoon" : "bg-card ring-1 ring-line"
+        }`;
+        const body = (
+          <>
             <span className="font-bold">{s.name}</span>
             <span className="flex items-center gap-1.5 text-[11px] leading-none text-muted">
               <StatusDot status={status} className="scale-75" />
               {stations ? STATUS_LABEL[status] : "…"}
             </span>
+          </>
+        );
+        return onPick ? (
+          <button
+            key={s.id}
+            role="radio"
+            aria-checked={active}
+            onClick={() => onPick(s.id)}
+            className={`${tile} transition active:scale-[0.97] ${active ? "" : "hover:ring-monsoon/50"}`}
+          >
+            {body}
           </button>
+        ) : (
+          <div key={s.id} role="listitem" className={tile}>
+            {body}
+          </div>
         );
       })}
     </div>
