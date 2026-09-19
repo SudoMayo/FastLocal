@@ -15,19 +15,19 @@ Instant disruption cover for Mumbai local train commuters. Tap once to protect y
 
 | 1. Setup, no app needed | 2. Pick a station | 3. Ride protected |
 |:---:|:---:|:---:|
-| <img src="docs/screenshots/1-setup.png" width="230" alt="Setup: demo wallet and free gas"> | <img src="docs/screenshots/2-choose-station.png" width="230" alt="Station picker with price card"> | <img src="docs/screenshots/3-protected.png" width="230" alt="Ride protected pass"> |
+| <img src="https://raw.githubusercontent.com/SudoMayo/FastLocal/main/docs/screenshots/1-setup.png" width="230" alt="Setup: demo wallet and free gas"> | <img src="https://raw.githubusercontent.com/SudoMayo/FastLocal/main/docs/screenshots/2-choose-station.png" width="230" alt="Station picker with price card"> | <img src="https://raw.githubusercontent.com/SudoMayo/FastLocal/main/docs/screenshots/3-protected.png" width="230" alt="Ride protected pass"> |
 | **4. Rain stops the train** | **5. Paid automatically** | **6. Switch station** |
-| <img src="docs/screenshots/5-service-stopped.png" width="230" alt="Service stopped, rain flooding"> | <img src="docs/screenshots/6-paid.png" width="230" alt="Rs 300 relief received"> | <img src="docs/screenshots/4-switch-station.png" width="230" alt="Protect a ride at another station"> |
+| <img src="https://raw.githubusercontent.com/SudoMayo/FastLocal/main/docs/screenshots/5-service-stopped.png" width="230" alt="Service stopped, rain flooding"> | <img src="https://raw.githubusercontent.com/SudoMayo/FastLocal/main/docs/screenshots/6-paid.png" width="230" alt="Rs 300 relief received"> | <img src="https://raw.githubusercontent.com/SudoMayo/FastLocal/main/docs/screenshots/4-switch-station.png" width="230" alt="Protect a ride at another station"> |
 
 **Operator screen** (for the projector): QR code, live station tiles, cause controls, and the on-chain speed proof.
 
-<img src="docs/screenshots/7-operator-screen.png" alt="Operator screen with speed proof banner">
+<img src="https://raw.githubusercontent.com/SudoMayo/FastLocal/main/docs/screenshots/7-operator-screen.png" alt="Operator screen with speed proof banner">
 
 ## Demo video
 
-<video src="docs/fastlocal-demo.mp4" controls width="720" aria-label="FastLocal demo video"></video>
+<a href="https://github.com/SudoMayo/FastLocal/blob/main/docs/fastlocal-demo.mp4"><img src="https://raw.githubusercontent.com/SudoMayo/FastLocal/main/docs/screenshots/7-operator-screen.png" width="720" alt="Watch the FastLocal demo video"></a>
 
-[Download or open the demo video](docs/fastlocal-demo.mp4)
+[Watch the demo video on GitHub](https://github.com/SudoMayo/FastLocal/blob/main/docs/fastlocal-demo.mp4) · [Open the MP4 directly](https://raw.githubusercontent.com/SudoMayo/FastLocal/main/docs/fastlocal-demo.mp4)
 
 ## The problem
 
